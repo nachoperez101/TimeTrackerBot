@@ -4,6 +4,8 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from dotenv import load_dotenv
 import os
+from discord.ext import commands 
+import webbrowser
 
 # ==============================
 # CONFIG (CADA PERSONA CAMBIA)
@@ -40,7 +42,8 @@ if sheet.row_count == 0 or sheet.get_all_values() == []:
         "Salida",
         "Duración (hh:mm:ss)",
         "Fecha",
-        "DíaSemana"
+        "DíaSemana",
+        "Tarea"
     ])
 
 # ==============================
@@ -50,17 +53,43 @@ if sheet.row_count == 0 or sheet.get_all_values() == []:
 intents = discord.Intents.default()
 intents.voice_states = True
 intents.members = True
+intents.message_content = True
 
-client = discord.Client(intents=intents)
+bot = commands.Bot(command_prefix="!", intents=intents)
+
 
 sessions = {}
+task = None
+open_sheet_on_register = False
 
-@client.event
+@bot.event
 async def on_ready():
-    print(f"Bot conectado como {client.user}")
-    print(f"Trackeando USER_ID = {TRACK_USER_ID}")
+    # Inicializar la Task en vacio
+    global task, open_sheet_on_register
+    task = None
+    open_sheet_on_register = False
 
-@client.event
+    print(f"Bot conectado como {bot.user}")
+    print(f"Trackeando USER_ID = {TRACK_USER_ID}")
+    
+    # Detectar si ya estaba en el voice
+    bot.loop.create_task(start_tracking_if_already_in_voice())
+
+# ==========================
+# YA ESTABA EN EL VOICE
+# ==========================
+async def start_tracking_if_already_in_voice():
+    await bot.wait_until_ready()
+
+    for guild in bot.guilds:
+        member = guild.get_member(TRACK_USER_ID)
+        if member and member.voice and member.voice.channel:
+            now = datetime.now()
+            sessions[member.id] = (member.name, member.voice.channel.name, now)
+            print(f"Usuario ya estaba en voice ({member.voice.channel.name}) -> tracking iniciado")
+            return
+
+@bot.event
 async def on_voice_state_update(member, before, after):
 
     # Ignorar todos menos el usuario configurado
@@ -97,10 +126,13 @@ async def on_voice_state_update(member, before, after):
                 duration,
                 now.strftime("%Y-%m-%d"),
                 now.strftime("%A"),
+                task
             ]
 
             sheet.append_row(row)
             print(f"Sesión de {channel} guardada")
+            if open_sheet_on_register:
+                webbrowser.open(spreadsheet.url)
 
     # ==========================
     # CAMBIO DE CANAL
@@ -126,8 +158,80 @@ async def on_voice_state_update(member, before, after):
             ]
 
             sheet.append_row(row)
+            if open_sheet_on_register:
+                webbrowser.open(spreadsheet.url)
 
         sessions[member.id] = (member.name, after.channel.name, now)
         print(f"Cambio a canal {after.channel.name} registrado")
 
-client.run(TOKEN)
+@bot.command()
+async def setTask(ctx, task_id):
+    global task
+    try:
+        if int(task_id) < 0:
+            await ctx.send("El id de la tarea debe ser mayor a cero.")
+        else:
+            task = int(task_id)
+            await ctx.send("Task seteada")
+    except:
+        await ctx.send("El id de la tarea debe ser un número.")
+
+
+@bot.command()
+async def getTask(ctx):
+    global task
+    await ctx.send(f"Current Task: {task}")
+
+@bot.command()
+async def cleanTask(ctx):
+    global task
+    task = None
+    await ctx.send(f"Se limpió la tarea asignada.")
+
+@bot.command()
+async def openSheetOn(ctx):
+    global open_sheet_on_register
+    open_sheet_on_register = True
+    await ctx.send("Auto-open Google Sheets ACTIVADO.")
+
+@bot.command()
+async def openSheetOff(ctx):
+    global open_sheet_on_register
+    open_sheet_on_register = False
+    await ctx.send("Auto-open Google Sheets DESACTIVADO.")
+
+@bot.command()
+async def openSheetStatus(ctx):
+    await ctx.send(f"Auto-open Sheets: {open_sheet_on_register}")
+
+
+@bot.command(name="listCommands")
+async def list_commands(ctx):
+    help_text = """
+** Lista de comandos disponibles**
+
+`!setTask <id>`  
+→ Asigna el ID de tarea actual (debe ser número mayor a 0).
+
+`!getTask`  
+→ Muestra la tarea actualmente seteada.
+
+`!cleanTask`  
+→ Limpia la tarea actual (queda en None).
+
+`!openSheetOn`  
+→ Activa la apertura automática de Google Sheets cuando se registra una sesión.
+
+`!openSheetOff`  
+→ Desactiva la apertura automática de Google Sheets.
+
+`!openSheetStatus`  
+→ Muestra si el auto-open de Sheets está activado o no.
+
+`!helpme`  
+→ Muestra esta ayuda.
+"""
+    await ctx.send(help_text)
+
+
+bot.run(TOKEN)
