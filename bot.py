@@ -42,7 +42,7 @@ creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 
 gs_client = gspread.authorize(creds)
 
-spreadsheet = gs_client.open(SHEET_NAME)
+spreadsheet = gs_client.open_by_key(os.getenv("GOOGLE_SHEET_ID"))
 sheet = spreadsheet.sheet1
 
 # Crear encabezados si no existen
