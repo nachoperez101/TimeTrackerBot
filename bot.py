@@ -29,6 +29,10 @@ scope = [
 ]
 
 google_json = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON")
+
+# Fix newline issue automatically
+google_json = google_json.replace("\\n", "\n")
+
 creds_dict = json.loads(google_json)
 creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 
