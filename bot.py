@@ -1,3 +1,4 @@
+import json
 import discord
 from datetime import datetime
 import gspread
@@ -27,7 +28,10 @@ scope = [
     "https://www.googleapis.com/auth/drive"
 ]
 
-creds = ServiceAccountCredentials.from_json_keyfile_name(JSON_KEYFILE, scope)
+google_json = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON")
+creds_dict = json.loads(google_json)
+creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+
 gs_client = gspread.authorize(creds)
 
 spreadsheet = gs_client.open(SHEET_NAME)
