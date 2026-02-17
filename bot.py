@@ -1,3 +1,4 @@
+import base64
 import json
 import discord
 from datetime import datetime
@@ -28,10 +29,13 @@ scope = [
     "https://www.googleapis.com/auth/drive"
 ]
 
-google_json = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON")
+google_base64 = os.getenv("GOOGLE_SERVICE_ACCOUNT_BASE64")
 
-# Fix newline issue automatically
-google_json = google_json.replace("\\n", "\n")
+if not google_base64:
+    raise ValueError("Missing GOOGLE_SERVICE_ACCOUNT_BASE64")
+
+# Decode base64
+google_json = base64.b64decode(google_base64).decode("utf-8")
 
 creds_dict = json.loads(google_json)
 creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
