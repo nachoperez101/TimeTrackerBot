@@ -15,7 +15,15 @@ import webbrowser
 
 load_dotenv()
 
-TRACK_USER_ID = int(os.getenv("DISCORD_TRACK_USER_ID")) # DISCORD USER ID
+raw_ids = os.getenv("DISCORD_TRACK_USER_IDS")
+
+if not raw_ids:
+    raise ValueError("Missing DISCORD_TRACK_USER_IDS")
+
+TRACK_USER_IDS = [int(uid.strip()) for uid in raw_ids.split(",")]
+
+print("Tracking USER IDs:", TRACK_USER_IDS)
+
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 JSON_KEYFILE = os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE")
 SHEET_NAME = os.getenv("GOOGLE_SHEET_NAME")
@@ -82,7 +90,7 @@ async def on_ready():
     open_sheet_on_register = False
 
     print(f"Bot conectado como {bot.user}")
-    print(f"Trackeando USER_ID = {TRACK_USER_ID}")
+    print(f"Trackeando USER_ID = {TRACK_USER_IDS}")
     
     # Detectar si ya estaba en el voice
     bot.loop.create_task(start_tracking_if_already_in_voice())
@@ -94,8 +102,12 @@ async def start_tracking_if_already_in_voice():
     await bot.wait_until_ready()
 
     for guild in bot.guilds:
-        member = guild.get_member(TRACK_USER_ID)
-        if member and member.voice and member.voice.channel:
+        for user_id in TRACK_USER_IDS:
+            member = guild.get_member(user_id)
+            if member and member.voice and member.voice.channel:
+                now = datetime.now()
+                sessions[member.id] = (member.name, member.voice.channel.name, now)
+                print(f"{member.name} ya estaba en voice ({member.voice.channel.name}) -> tracking iniciado")
             now = datetime.now()
             sessions[member.id] = (member.name, member.voice.channel.name, now)
             print(f"Usuario ya estaba en voice ({member.voice.channel.name}) -> tracking iniciado")
@@ -105,7 +117,7 @@ async def start_tracking_if_already_in_voice():
 async def on_voice_state_update(member, before, after):
 
     # Ignorar todos menos el usuario configurado
-    if member.id != TRACK_USER_ID:
+    if member.id not in TRACK_USER_IDS:
         return
 
     now = datetime.now()
