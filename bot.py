@@ -53,6 +53,10 @@ gs_client = gspread.authorize(creds)
 spreadsheet = gs_client.open_by_key(os.getenv("GOOGLE_SHEET_ID"))
 sheet = spreadsheet.sheet1
 
+
+def append_session_row(row):
+    sheet.append_row(row, value_input_option="USER_ENTERED")
+
 # Crear encabezados si no existen
 if sheet.row_count == 0 or sheet.get_all_values() == []:
     sheet.append_row([
@@ -153,7 +157,7 @@ async def on_voice_state_update(member, before, after):
                 task
             ]
 
-            sheet.append_row(row)
+            append_session_row(row)
             print(f"Sesión de {channel} guardada")
             if open_sheet_on_register:
                 webbrowser.open(spreadsheet.url)
@@ -182,7 +186,7 @@ async def on_voice_state_update(member, before, after):
                 task
             ]
 
-            sheet.append_row(row)
+            append_session_row(row)
             if open_sheet_on_register:
                 webbrowser.open(spreadsheet.url)
 
