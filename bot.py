@@ -1,7 +1,7 @@
 import base64
 import json
 import discord
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from dotenv import load_dotenv
@@ -23,6 +23,12 @@ if not raw_ids:
 TRACK_USER_IDS = [int(uid.strip()) for uid in raw_ids.split(",")]
 
 print("Tracking USER IDs:", TRACK_USER_IDS)
+
+TIMEZONE = timezone(timedelta(hours=-3))
+
+
+def now_local():
+    return datetime.now(TIMEZONE)
 
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 JSON_KEYFILE = os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE")
@@ -109,10 +115,10 @@ async def start_tracking_if_already_in_voice():
         for user_id in TRACK_USER_IDS:
             member = guild.get_member(user_id)
             if member and member.voice and member.voice.channel:
-                now = datetime.now()
+                now = now_local()
                 sessions[member.id] = (member.name, member.voice.channel.name, now)
                 print(f"{member.name} ya estaba en voice ({member.voice.channel.name}) -> tracking iniciado")
-            now = datetime.now()
+            now = now_local()
             sessions[member.id] = (member.name, member.voice.channel.name, now)
             print(f"Usuario ya estaba en voice ({member.voice.channel.name}) -> tracking iniciado")
             return
@@ -124,7 +130,7 @@ async def on_voice_state_update(member, before, after):
     if member.id not in TRACK_USER_IDS:
         return
 
-    now = datetime.now()
+    now = now_local()
 
     # ==========================
     # ENTRÓ A VOICE
