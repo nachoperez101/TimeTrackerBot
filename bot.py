@@ -158,7 +158,7 @@ async def on_voice_state_update(member, before, after):
                 start.strftime("%Y-%m-%d %H:%M:%S"),
                 now.strftime("%Y-%m-%d %H:%M:%S"),
                 duration,
-                now.strftime("%Y/%m/%d"),
+                now.strftime("%d/%m/%Y"),
                 now.strftime("%A"),
                 task
             ]
@@ -187,7 +187,7 @@ async def on_voice_state_update(member, before, after):
                 start.strftime("%Y-%m-%d %H:%M:%S"),
                 now.strftime("%Y-%m-%d %H:%M:%S"),
                 duration,
-                now.strftime("%Y/%m/%d"),
+                now.strftime("%d/%m/%Y"),
                 now.strftime("%A"),
                 task
             ]
